@@ -1,41 +1,18 @@
-kind: pipeline
-type: docker
-name: Debian (w/ tests) (amd64)
+---
+kind: pipeline                                        
+type: macstadium
+name: default
+
+settings:
+  image: MojaveWithXcode.img
 
 steps:
-- name: submodules
-  image: drone/git
+- name: install
   commands:
-  - git fetch --tags
-  - git submodule update --init --recursive --depth=1
+  - pod --version
+  - pod install
 
-- name: build
-  image: debian:sid
+- name: test
   commands:
-  - echo \"Building on ${DRONE_STAGE_MACHINE}\"
-  - echo \"man-db man-db/auto-update boolean false\" | debconf-set-selections
-  - apt-get -o=Dpkg::Use-Pty=0 -q update
-  - apt-get -o=Dpkg::Use-Pty=0 -q install -y eatmydata
-  - eatmydata apt-get -o=Dpkg::Use-Pty=0 -q dist-upgrade -y
-  - eatmydata apt-get -o=Dpkg::Use-Pty=0 -q install -y --no-install-recommends cmake git ca-certificates ninja-build ccache g++ libsystemd-dev libboost-thread-dev libgtest-dev libboost-serialization-dev libboost-program-options-dev libunbound-dev nettle-dev libevent-dev libminiupnpc-dev libunwind8-dev libsodium-dev libssl-dev libreadline-dev libhidapi-dev libusb-1.0-0-dev python3 pkg-config libsqlite3-dev qttools5-dev libcurl4-openssl-dev gdb
-  - mkdir build
-  - cd build
-  - cmake .. -G Ninja -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always -DCMAKE_BUILD_TYPE=Release -DLOCAL_MIRROR=https://builds.belnet.dev/deps -DUSE_LTO=ON -DBUILD_TESTS=OFF
-  - ninja -j6 -v
-  - cd ..
-  - zip -r binary.zip /build/release/bin/*
-
-- name: scp files
-  image: appleboy/drone-scp
-  settings:
-    host:
-     - deb.beldex.io
-    user: ubuntu
-    password:
-     from_secret: ssh_password
-    port: 22
-    command_timeout: 120
-    command_timeout: 2m
-    target: /home/ubuntu
-    source:
-      - binary.zip
+  - xcodebuild -version -sdk
+  - X build test
